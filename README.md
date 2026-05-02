@@ -1,4 +1,4 @@
-<h2>텍스트 추출 프로그램 - 윤슬-제로 V0.1</h2>
+<h2>텍스트 추출 프로그램 - 윤슬 제로 V0.1</h2>
 <img width="664" height="718" alt="image" src="https://github.com/user-attachments/assets/09fad365-daa9-48f5-b707-fc511f10477f" />
 <ul>
   <li>텍스트로 되어 있는 값들에 대해 추출 키 값을 입력하여 데이터 추출, 엑셀로 자동 등록</li>
