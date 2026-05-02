@@ -77,6 +77,13 @@ namespace DataParser
         {
             for (int i = 0; i < DefaultKeywords.Length && i < _txtKeywords.Length; i++)
                 _txtKeywords[i].Text = DefaultKeywords[i];
+
+            // 최초 실행 기본값: "1., Full Name, name" (인덱스 2) UNIQUE 선택, COL No. 순차 부여
+            if (_rdoUnique.Length > 2)
+                _rdoUnique[2].Checked = true;
+            int colNum = 1;
+            for (int i = 2; i < _txtColNums.Length; i++)
+                _txtColNums[i].Text = (colNum++).ToString();
         }
 
         private void EnableFormDrag()
@@ -315,6 +322,7 @@ namespace DataParser
                                 int newRow = lastDataRow + 1;
                                 for (int i = 0; i < _txtKeywords.Length; i++)
                                 { string val = _txtValues[i].Text.Trim(); string numStr = _txtColNums[i].Text.Trim();
+                                  if (string.IsNullOrEmpty(val)) continue;
                                   if (!string.IsNullOrEmpty(numStr) && int.TryParse(numStr, out int col) && col > 0) ws.Cells[newRow, col].Value = CleanSpecialChars(val); }
                                 File.WriteAllBytes(_excelPath, pkg.GetAsByteArray());
                                 MessageBox.Show($"시트 '{selectedSheet}'의 {newRow}행에 새로 입력했습니다.", "완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -331,6 +339,7 @@ namespace DataParser
                         int newRow = lastDataRow + 1;
                         for (int i = 0; i < _txtKeywords.Length; i++)
                         { string val = _txtValues[i].Text.Trim(); string numStr = _txtColNums[i].Text.Trim();
+                          if (string.IsNullOrEmpty(val)) continue;
                           if (!string.IsNullOrEmpty(numStr) && int.TryParse(numStr, out int col) && col > 0) ws.Cells[newRow, col].Value = CleanSpecialChars(val); }
                         File.WriteAllBytes(_excelPath, pkg.GetAsByteArray());
                         MessageBox.Show($"시트 '{selectedSheet}'의 {newRow}행에 새로 입력했습니다.", "완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -346,6 +355,7 @@ namespace DataParser
                     int newRow = lastDataRow + 1;
                     for (int i = 0; i < _txtKeywords.Length; i++)
                     { string val = _txtValues[i].Text.Trim(); string numStr = _txtColNums[i].Text.Trim();
+                      if (string.IsNullOrEmpty(val)) continue;
                       if (!string.IsNullOrEmpty(numStr) && int.TryParse(numStr, out int col) && col > 0) ws.Cells[newRow, col].Value = CleanSpecialChars(val); }
                     File.WriteAllBytes(_excelPath, pkg.GetAsByteArray());
                     MessageBox.Show($"시트 '{selectedSheet}'의 {newRow}행에 데이터를 입력했습니다.", "완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
