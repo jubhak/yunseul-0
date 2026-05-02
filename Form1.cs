@@ -116,6 +116,8 @@ namespace DataParser
             for (int i = rowCount + 1; i < _hLines.Length; i++) _hLines[i].Visible = false;
             _vLine1.SetBounds(titleW, 0, 1, y + 1); _vLine2.SetBounds(titleW + valW, 0, 1, y + 1);
             _vLine1.BringToFront(); _vLine2.BringToFront();
+            panelTable.AutoScrollPosition = new Point(0, 0);
+            panelTable.AutoScrollMinSize = new Size(0, y + 2);
         }
 
         private void AddCloseButton()
@@ -192,6 +194,24 @@ namespace DataParser
             { MessageBox.Show("먼저 엑셀 파일을 선택해주세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (cboSheet.SelectedIndex < 0)
             { MessageBox.Show("엑셀 시트를 선택해주세요.", "알림", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+
+            // 키워드가 비어있는 행 확인
+            var emptyRows = new List<int>();
+            for (int i = 0; i < _txtKeywords.Length; i++)
+                if (string.IsNullOrWhiteSpace(_txtKeywords[i].Text)) emptyRows.Add(i);
+
+            if (emptyRows.Count > 0)
+            {
+                var result = MessageBox.Show("키워드 값이 없는 항목이 있습니다.\n해당 행을 삭제하시겠습니까?",
+                    "알림", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    RemoveRows(emptyRows);
+                    SaveSettings();
+                }
+                ResetScroll();
+            }
+
             string selectedSheet = cboSheet.SelectedItem?.ToString() ?? "";
             var entries = new List<(int col, string value)>();
             for (int i = 0; i < _txtKeywords.Length; i++)
@@ -221,7 +241,7 @@ namespace DataParser
         }
 
         private void ResetAfterInsert()
-        { txtInput.Text = ""; for (int i = 0; i < _txtKeywords.Length; i++) _txtValues[i].Text = ""; }
+        { txtInput.Text = ""; for (int i = 0; i < _txtKeywords.Length; i++) _txtValues[i].Text = ""; ResetScroll(); }
 
         private void ParseAndDisplay(string rawText)
         {
@@ -285,6 +305,33 @@ namespace DataParser
         }
 
         private void BtnAddRow_Click(object? sender, EventArgs e) => AddTableRow();
+
+        private void ResetScroll()
+        {
+            panelTable.AutoScrollPosition = new Point(0, 0);
+            LayoutTable();
+        }
+
+        private void RemoveRows(List<int> indices)
+        {
+            // 역순으로 삭제 (인덱스 밀림 방지)
+            foreach (int idx in indices.OrderByDescending(x => x))
+            {
+                panelTable.Controls.Remove(_txtKeywords[idx]);
+                panelTable.Controls.Remove(_txtValues[idx]);
+                panelTable.Controls.Remove(_txtColNums[idx]);
+                _txtKeywords[idx].Dispose();
+                _txtValues[idx].Dispose();
+                _txtColNums[idx].Dispose();
+
+                var kwList = _txtKeywords.ToList(); kwList.RemoveAt(idx); _txtKeywords = kwList.ToArray();
+                var valList = _txtValues.ToList(); valList.RemoveAt(idx); _txtValues = valList.ToArray();
+                var colList = _txtColNums.ToList(); colList.RemoveAt(idx); _txtColNums = colList.ToArray();
+            }
+            panelTable.AutoScrollPosition = new Point(0, 0);
+            LayoutTable();
+            panelTable.Invalidate();
+        }
 
         private void AddTableRow()
         {

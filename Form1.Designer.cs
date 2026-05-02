@@ -187,8 +187,8 @@ namespace DataParser
                 Text = "+",
                 ForeColor = GREEN,
                 BackColor = Color.FromArgb(30, 36, 44),
-                Font = new Font("Consolas", 9F, FontStyle.Bold),
-                Size = new Size(20, 18),
+                Font = new Font("Consolas", 8F, FontStyle.Bold),
+                Size = new Size(18, 14),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Cursor = Cursors.Hand
             };
@@ -199,7 +199,7 @@ namespace DataParser
             panelResultHeader.Controls.Add(btnAddRow);
             panelResultHeader.Resize += (s, e) =>
             {
-                btnAddRow.Location = new Point(lblResult.Right + 6, 2);
+                btnAddRow.Location = new Point(lblResult.Right + 6, 4);
             };
 
             int hdrH = 26;
