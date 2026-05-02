@@ -18,11 +18,16 @@ namespace DataParser
         private Panel panelMid = null!;
         private Panel panelBottom = null!;
         private Panel panelTable = null!;
+        private ComboBox cboSheet = null!;
+        private Label lblSheetSelect = null!;
 
         // 결과 테이블 행 데이터
-        private Label[] _lblTitles = null!;
-        private Label[] _lblValues = null!;
+        private TextBox[] _txtKeywords = null!;
+        private TextBox[] _txtValues = null!;
         private TextBox[] _txtColNums = null!;
+        private Panel[] _hLines = null!;
+        private Panel _vLine1 = null!;
+        private Panel _vLine2 = null!;
 
         protected override void Dispose(bool disposing)
         {
@@ -82,14 +87,38 @@ namespace DataParser
             Color GREEN  = Color.FromArgb(63, 185, 80);
 
             // ============================================================
-            // 상단: 입력 영역
+            // 상단: 타이틀 + 입력 영역
             // ============================================================
-            panelTop = new Panel { Dock = DockStyle.Top, Height = 256, BackColor = BG, Padding = new Padding(10, 8, 10, 0) };
+            panelTop = new Panel { Dock = DockStyle.Top, Height = 296, BackColor = BG, Padding = new Padding(10, 0, 10, 0) };
+
+            // 타이틀 바 (panelTop 내부 맨 위)
+            var panelTitleBar = new Panel { Dock = DockStyle.Top, Height = 30, BackColor = BG };
+            var lblTitle = new Label
+            {
+                Text = "  [▓]  YUNSEUL-0",
+                ForeColor = BLUE,
+                BackColor = Color.Transparent,
+                Font = new Font("Consolas", 9F, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(0, 7)
+            };
+            panelTitleBar.Controls.Add(lblTitle);
+
+            // 타이틀 바 드래그
+            panelTitleBar.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { _dragging = true; _dragStart = e.Location; } };
+            panelTitleBar.MouseMove += (s, e) => { if (_dragging) { var p = PointToScreen(e.Location); SetDesktopLocation(p.X - _dragStart.X, p.Y - _dragStart.Y); } };
+            panelTitleBar.MouseUp += (s, e) => _dragging = false;
+            lblTitle.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { _dragging = true; _dragStart = e.Location; } };
+            lblTitle.MouseMove += (s, e) => { if (_dragging) { var p = this.PointToScreen(e.Location); SetDesktopLocation(p.X - _dragStart.X, p.Y - _dragStart.Y); } };
+            lblTitle.MouseUp += (s, e) => _dragging = false;
+
+            // DATA INPUT 라벨 위 10px 여백용 패널
+            var panelInputGap = new Panel { Dock = DockStyle.Top, Height = 10, BackColor = BG };
 
             lblInput = new Label
             {
                 Text = "  ▌ DATA INPUT",
-                ForeColor = BLUE,
+                ForeColor = Color.FromArgb(255, 140, 50),
                 BackColor = Color.Transparent,
                 Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
                 Dock = DockStyle.Top,
@@ -131,33 +160,55 @@ namespace DataParser
                 btnProcess.Location = new Point((panelBtn1.Width - btnProcess.Width) / 2, (panelBtn1.Height - btnProcess.Height) / 2);
             };
 
-            panelTop.Controls.Add(txtInput);
-            panelTop.Controls.Add(panelBtn1);
-            panelTop.Controls.Add(lblInput);
+            panelTop.Controls.Add(txtInput);       // Fill
+            panelTop.Controls.Add(panelBtn1);       // Bottom
+            panelTop.Controls.Add(lblInput);        // Top (DATA INPUT 라벨)
+            panelTop.Controls.Add(panelInputGap);   // Top (10px 여백)
+            panelTop.Controls.Add(panelTitleBar);   // Top (타이틀 — 가장 마지막 Add → 가장 위)
 
             // ============================================================
             // 중간: 결과 테이블 (Label + TextBox 기반)
             // ============================================================
             panelMid = new Panel { Dock = DockStyle.Fill, BackColor = BG, Padding = new Padding(10, 4, 10, 4) };
 
+            // PARSED RESULT 라벨 + 행 추가 버튼을 담는 패널
+            var panelResultHeader = new Panel { Dock = DockStyle.Top, Height = 22, BackColor = BG };
             lblResult = new Label
             {
                 Text = "  ▌ PARSED RESULT",
                 ForeColor = GREEN,
                 BackColor = Color.Transparent,
                 Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
-                Dock = DockStyle.Top,
-                Height = 22
+                AutoSize = true,
+                Location = new Point(0, 3)
+            };
+            var btnAddRow = new Label
+            {
+                Text = "+",
+                ForeColor = GREEN,
+                BackColor = Color.FromArgb(30, 36, 44),
+                Font = new Font("Consolas", 9F, FontStyle.Bold),
+                Size = new Size(20, 18),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Cursor = Cursors.Hand
+            };
+            btnAddRow.Click += BtnAddRow_Click;
+            btnAddRow.MouseEnter += (s, e) => btnAddRow.ForeColor = Color.White;
+            btnAddRow.MouseLeave += (s, e) => btnAddRow.ForeColor = GREEN;
+            panelResultHeader.Controls.Add(lblResult);
+            panelResultHeader.Controls.Add(btnAddRow);
+            panelResultHeader.Resize += (s, e) =>
+            {
+                btnAddRow.Location = new Point(lblResult.Right + 6, 2);
             };
 
-            int rowH = 24;
             int hdrH = 26;
             int count = 13;
             var hdrBg = Color.FromArgb(1, 4, 9);
 
             // 헤더 패널 (고정, 스크롤 안 됨)
             var panelHeader = new Panel { Dock = DockStyle.Top, Height = hdrH, BackColor = hdrBg };
-            var hdrTitle = new Label { Text = "TITLE", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6, 0, 0, 0) };
+            var hdrTitle = new Label { Text = "KEYWORDS", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6, 0, 0, 0) };
             var hdrValue = new Label { Text = "VALUE", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6, 0, 0, 0) };
             var hdrCol = new Label { Text = "COL #", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
             panelHeader.Controls.AddRange(new Control[] { hdrTitle, hdrValue, hdrCol });
@@ -165,33 +216,34 @@ namespace DataParser
             // 데이터 패널 (스크롤 가능)
             panelTable = new Panel { Dock = DockStyle.Fill, BackColor = CARD, AutoScroll = true };
 
-            _lblTitles = new Label[count];
-            _lblValues = new Label[count];
+            _txtKeywords = new TextBox[count];
+            _txtValues = new TextBox[count];
             _txtColNums = new TextBox[count];
 
             // 구분선 저장용
-            var hLines = new Panel[count + 1]; // 가로선
-            var vLine1 = new Panel { BackColor = BORDER, Width = 1 }; // title|value
-            var vLine2 = new Panel { BackColor = BORDER, Width = 1 }; // value|col#
+            _hLines = new Panel[count + 1]; // 가로선
+            _vLine1 = new Panel { BackColor = BORDER, Width = 1 }; // title|value
+            _vLine2 = new Panel { BackColor = BORDER, Width = 1 }; // value|col#
 
             for (int i = 0; i <= count; i++)
-                hLines[i] = new Panel { BackColor = BORDER, Height = 1 };
+                _hLines[i] = new Panel { BackColor = BORDER, Height = 1 };
 
             for (int i = 0; i < count; i++)
             {
-                _lblTitles[i] = new Label
+                _txtKeywords[i] = new TextBox
                 {
                     BackColor = CARD, ForeColor = FG2,
-                    Font = new Font("Consolas", 9F, FontStyle.Bold),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(6, 0, 0, 0)
+                    Font = new Font("Consolas", 8F),
+                    BorderStyle = BorderStyle.None,
+                    TextAlign = HorizontalAlignment.Left
                 };
-                _lblValues[i] = new Label
+                _txtKeywords[i].Leave += (s, ev) => SaveSettings();
+                _txtValues[i] = new TextBox
                 {
                     BackColor = CARD, ForeColor = FG,
                     Font = new Font("Segoe UI", 9F),
-                    TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(6, 0, 0, 0)
+                    BorderStyle = BorderStyle.None,
+                    TextAlign = HorizontalAlignment.Left
                 };
                 _txtColNums[i] = new TextBox
                 {
@@ -206,65 +258,39 @@ namespace DataParser
                 _txtColNums[i].Leave += (s, ev) =>
                 { var tb = (TextBox)s!; if (tb.Text.Trim() == "0") tb.Text = ""; SaveSettings(); };
 
-                panelTable.Controls.Add(_lblTitles[i]);
-                panelTable.Controls.Add(_lblValues[i]);
+                panelTable.Controls.Add(_txtKeywords[i]);
+                panelTable.Controls.Add(_txtValues[i]);
                 panelTable.Controls.Add(_txtColNums[i]);
             }
 
             // 구분선 컨트롤 추가 (맨 위에 올리기 위해 나중에 추가)
-            for (int i = 0; i <= count; i++) panelTable.Controls.Add(hLines[i]);
-            panelTable.Controls.Add(vLine1);
-            panelTable.Controls.Add(vLine2);
+            for (int i = 0; i <= count; i++) panelTable.Controls.Add(_hLines[i]);
+            panelTable.Controls.Add(_vLine1);
+            panelTable.Controls.Add(_vLine2);
 
             // 헤더 레이아웃
             panelHeader.Resize += (s, e) =>
             {
                 int w = panelHeader.ClientSize.Width;
                 int colW = 60;
-                int titleW = (int)(w * 0.32);
+                int titleW = (int)(w * 0.42);
                 int valW = w - titleW - colW;
                 hdrTitle.SetBounds(0, 0, titleW, hdrH);
                 hdrValue.SetBounds(titleW, 0, valW, hdrH);
                 hdrCol.SetBounds(titleW + valW, 0, colW, hdrH);
             };
 
-            // 데이터 레이아웃
-            panelTable.Resize += (s, e) =>
-            {
-                int w = panelTable.ClientSize.Width;
-                int colW = 60;
-                int titleW = (int)(w * 0.32);
-                int valW = w - titleW - colW;
-                int totalH = count * rowH + count + 1; // 행 + 구분선
-
-                int y = 0;
-                for (int i = 0; i < count; i++)
-                {
-                    hLines[i].SetBounds(0, y, w, 1);
-                    y += 1;
-                    _lblTitles[i].SetBounds(0, y, titleW, rowH);
-                    _lblValues[i].SetBounds(titleW, y, valW, rowH);
-                    _txtColNums[i].SetBounds(titleW + valW + 4, y + 2, colW - 8, rowH - 4);
-                    y += rowH;
-                }
-                hLines[count].SetBounds(0, y, w, 1);
-
-                // 세로선
-                vLine1.SetBounds(titleW, 0, 1, y + 1);
-                vLine2.SetBounds(titleW + valW, 0, 1, y + 1);
-
-                // 세로선을 맨 앞으로
-                vLine1.BringToFront();
-                vLine2.BringToFront();
-            };
+            // 데이터 레이아웃 (동적 행 수 지원)
+            panelTable.Resize += (s, e) => LayoutTable();
 
             panelMid.Controls.Add(panelTable);   // Fill (스크롤)
             panelMid.Controls.Add(panelHeader);  // Top (고정)
-            panelMid.Controls.Add(lblResult);
+            panelMid.Controls.Add(panelResultHeader);
+
             // ============================================================
-            // 하단: 엑셀 선택 + 구분선 + 입력처리
+            // 하단: 엑셀 선택 + 시트 선택 + 구분선 + 입력처리
             // ============================================================
-            panelBottom = new Panel { Dock = DockStyle.Bottom, Height = 120, BackColor = BG, Padding = new Padding(10, 6, 10, 8) };
+            panelBottom = new Panel { Dock = DockStyle.Bottom, Height = 130, BackColor = BG, Padding = new Padding(10, 6, 10, 4) };
 
             btnSelectExcel = new RoundButton
             {
@@ -288,6 +314,49 @@ namespace DataParser
                 AutoSize = false,
                 Height = 18,
                 TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            lblSheetSelect = new Label
+            {
+                Text = "엑셀시트 선택",
+                ForeColor = FG2,
+                BackColor = Color.Transparent,
+                Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+                AutoSize = true
+            };
+
+            cboSheet = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.FromArgb(30, 36, 44),
+                ForeColor = FG,
+                Font = new Font("Segoe UI", 8F),
+                FlatStyle = FlatStyle.Flat,
+                Width = 160
+            };
+
+            // 콤보박스를 감싸는 보더 패널 (라운드 1px, 보더 #CCC)
+            Color cboBorder = Color.FromArgb(204, 204, 204);
+            var panelCboWrap = new Panel
+            {
+                BackColor = cboBorder,
+                Padding = new Padding(1)
+            };
+            cboSheet.Dock = DockStyle.Fill;
+            panelCboWrap.Controls.Add(cboSheet);
+            panelCboWrap.Paint += (s, ev) =>
+            {
+                using var pen = new Pen(cboBorder, 1);
+                var rc = new Rectangle(0, 0, panelCboWrap.Width - 1, panelCboWrap.Height - 1);
+                using var path = new GraphicsPath();
+                int d = 2; // 1px radius → diameter 2
+                path.AddArc(rc.X, rc.Y, d, d, 180, 90);
+                path.AddArc(rc.Right - d, rc.Y, d, d, 270, 90);
+                path.AddArc(rc.Right - d, rc.Bottom - d, d, d, 0, 90);
+                path.AddArc(rc.X, rc.Bottom - d, d, d, 90, 90);
+                path.CloseFigure();
+                ev.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                ev.Graphics.DrawPath(pen, path);
             };
 
             var separator = new Panel { BackColor = Color.FromArgb(48, 54, 61), Height = 1 };
@@ -318,6 +387,8 @@ namespace DataParser
 
             panelBottom.Controls.Add(btnSelectExcel);
             panelBottom.Controls.Add(lblExcelPath);
+            panelBottom.Controls.Add(lblSheetSelect);
+            panelBottom.Controls.Add(panelCboWrap);
             panelBottom.Controls.Add(separator);
             panelBottom.Controls.Add(lblStatus);
             panelBottom.Controls.Add(btnInsert);
@@ -334,16 +405,26 @@ namespace DataParser
                 lblExcelPath.Location = new Point(pad + btnSelectExcel.Width + 8, 10);
                 lblExcelPath.Width = cx - pad * 2 - btnSelectExcel.Width - 12;
 
+                // 시트 선택 행 — 위 간격 10px, 수직 중앙 정렬
+                int sheetTop = btnSelectExcel.Bottom + 10;
+                int cboH = cboSheet.Height + 2; // 패널 = 콤보 + 보더 패딩
+                panelCboWrap.Height = cboH;
+                int lblH = lblSheetSelect.Height;
+                int rowCenter = sheetTop + Math.Max(cboH, lblH) / 2;
+                lblSheetSelect.Location = new Point(pad, rowCenter - lblH / 2);
+                panelCboWrap.Location = new Point(pad + lblSheetSelect.Width + 6, rowCenter - cboH / 2);
+                panelCboWrap.Width = cx - pad * 2 - lblSheetSelect.Width - 10;
+
                 separator.Width = cx - pad * 2;
-                separator.Location = new Point(pad, btnSelectExcel.Bottom + 20);
+                separator.Location = new Point(pad, panelCboWrap.Bottom + 8);
 
                 var szIns = TextRenderer.MeasureText(btnInsert.Text, btnInsert.Font);
                 btnInsert.Size = new Size(szIns.Width + 48, 30);
-                btnInsert.Location = new Point((cx - btnInsert.Width) / 2, separator.Bottom + 20);
+                btnInsert.Location = new Point((cx - btnInsert.Width) / 2, separator.Bottom + 5);
             };
 
             // ============================================================
-            // Form
+            // Form — 원래 순서 그대로 (panelMid=Fill, panelBottom=Bottom, panelTop=Top)
             // ============================================================
             this.Controls.Add(panelMid);
             this.Controls.Add(panelBottom);
@@ -351,8 +432,8 @@ namespace DataParser
 
             this.Text = "YUNSEUL-0";
             this.BackColor = BG;
-            this.Size = new Size(490, 700);
-            this.MinimumSize = new Size(420, 500);
+            this.Size = new Size(640, 700);
+            this.MinimumSize = new Size(560, 500);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.None;
             this.TopMost = true;
