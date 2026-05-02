@@ -18,16 +18,23 @@ namespace DataParser
         private Panel panelMid = null!;
         private Panel panelBottom = null!;
         private Panel panelTable = null!;
+        private Panel panelHeader = null!;
+        private Label hdrTitle = null!;
+        private Label hdrValue = null!;
+        private Label hdrUnique = null!;
+        private Label hdrCol = null!;
         private ComboBox cboSheet = null!;
         private Label lblSheetSelect = null!;
 
         // 결과 테이블 행 데이터
         private TextBox[] _txtKeywords = null!;
         private TextBox[] _txtValues = null!;
+        private RadioButton[] _rdoUnique = null!;
         private TextBox[] _txtColNums = null!;
         private Panel[] _hLines = null!;
         private Panel _vLine1 = null!;
         private Panel _vLine2 = null!;
+        private Panel _vLine3 = null!;
 
         protected override void Dispose(bool disposing)
         {
@@ -156,7 +163,7 @@ namespace DataParser
             panelBtn1.Resize += (s, e) =>
             {
                 var sz = TextRenderer.MeasureText(btnProcess.Text, btnProcess.Font);
-                btnProcess.Size = new Size(sz.Width + 48, 32);
+                btnProcess.Size = new Size(sz.Width + 20, 32);
                 btnProcess.Location = new Point((panelBtn1.Width - btnProcess.Width) / 2, (panelBtn1.Height - btnProcess.Height) / 2);
             };
 
@@ -207,23 +214,25 @@ namespace DataParser
             var hdrBg = Color.FromArgb(1, 4, 9);
 
             // 헤더 패널 (고정, 스크롤 안 됨)
-            var panelHeader = new Panel { Dock = DockStyle.Top, Height = hdrH, BackColor = hdrBg };
-            var hdrTitle = new Label { Text = "KEYWORDS", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6, 0, 0, 0) };
-            var hdrValue = new Label { Text = "VALUE", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(6, 0, 0, 0) };
-            var hdrCol = new Label { Text = "COL #", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
-            panelHeader.Controls.AddRange(new Control[] { hdrTitle, hdrValue, hdrCol });
+            panelHeader = new Panel { Dock = DockStyle.Top, Height = hdrH, BackColor = hdrBg };
+            hdrTitle = new Label { Text = "KEYWORDS", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(4, 0, 0, 0) };
+            hdrValue = new Label { Text = "VALUE", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 9F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(4, 0, 0, 0) };
+            hdrUnique = new Label { Text = "UNIQUE", BackColor = hdrBg, ForeColor = Color.FromArgb(255, 140, 50), Font = new Font("Segoe UI", 7.5F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(2, 0, 0, 0) };
+            hdrCol = new Label { Text = "COL No.", BackColor = hdrBg, ForeColor = BLUE, Font = new Font("Segoe UI", 8F, FontStyle.Bold), TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(2, 0, 0, 0) };
+            panelHeader.Controls.AddRange(new Control[] { hdrTitle, hdrValue, hdrUnique, hdrCol });
 
             // 데이터 패널 (스크롤 가능)
             panelTable = new Panel { Dock = DockStyle.Fill, BackColor = CARD, AutoScroll = true };
 
             _txtKeywords = new TextBox[count];
             _txtValues = new TextBox[count];
+            _rdoUnique = new RadioButton[count];
             _txtColNums = new TextBox[count];
 
-            // 구분선 저장용
             _hLines = new Panel[count + 1]; // 가로선
             _vLine1 = new Panel { BackColor = BORDER, Width = 1 }; // title|value
-            _vLine2 = new Panel { BackColor = BORDER, Width = 1 }; // value|col#
+            _vLine2 = new Panel { BackColor = BORDER, Width = 1 }; // value|unique
+            _vLine3 = new Panel { BackColor = BORDER, Width = 1 }; // unique|col
 
             for (int i = 0; i <= count; i++)
                 _hLines[i] = new Panel { BackColor = BORDER, Height = 1 };
@@ -245,6 +254,17 @@ namespace DataParser
                     BorderStyle = BorderStyle.None,
                     TextAlign = HorizontalAlignment.Left
                 };
+                _rdoUnique[i] = new RadioButton
+                {
+                    BackColor = CARD, ForeColor = FG,
+                    AutoCheck = false,
+                    Appearance = Appearance.Normal,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Text = "",
+                    Cursor = Cursors.Hand
+                };
+                int capturedIdx = i;
+                _rdoUnique[i].Click += (s, ev) => UniqueRadio_Click(capturedIdx);
                 _txtColNums[i] = new TextBox
                 {
                     BackColor = Color.FromArgb(30, 36, 44), ForeColor = FG,
@@ -260,25 +280,14 @@ namespace DataParser
 
                 panelTable.Controls.Add(_txtKeywords[i]);
                 panelTable.Controls.Add(_txtValues[i]);
+                panelTable.Controls.Add(_rdoUnique[i]);
                 panelTable.Controls.Add(_txtColNums[i]);
             }
 
-            // 구분선 컨트롤 추가 (맨 위에 올리기 위해 나중에 추가)
             for (int i = 0; i <= count; i++) panelTable.Controls.Add(_hLines[i]);
             panelTable.Controls.Add(_vLine1);
             panelTable.Controls.Add(_vLine2);
-
-            // 헤더 레이아웃
-            panelHeader.Resize += (s, e) =>
-            {
-                int w = panelHeader.ClientSize.Width;
-                int colW = 60;
-                int titleW = (int)(w * 0.42);
-                int valW = w - titleW - colW;
-                hdrTitle.SetBounds(0, 0, titleW, hdrH);
-                hdrValue.SetBounds(titleW, 0, valW, hdrH);
-                hdrCol.SetBounds(titleW + valW, 0, colW, hdrH);
-            };
+            panelTable.Controls.Add(_vLine3);
 
             // 데이터 레이아웃 (동적 행 수 지원)
             panelTable.Resize += (s, e) => LayoutTable();
@@ -399,7 +408,7 @@ namespace DataParser
                 int pad = panelBottom.Padding.Left;
 
                 var szExcel = TextRenderer.MeasureText(btnSelectExcel.Text, btnSelectExcel.Font);
-                btnSelectExcel.Size = new Size(szExcel.Width + 48, 30);
+                btnSelectExcel.Size = new Size(szExcel.Width + 20, 30);
                 btnSelectExcel.Location = new Point(pad, 6);
 
                 lblExcelPath.Location = new Point(pad + btnSelectExcel.Width + 8, 10);
@@ -419,7 +428,7 @@ namespace DataParser
                 separator.Location = new Point(pad, panelCboWrap.Bottom + 8);
 
                 var szIns = TextRenderer.MeasureText(btnInsert.Text, btnInsert.Font);
-                btnInsert.Size = new Size(szIns.Width + 48, 30);
+                btnInsert.Size = new Size(szIns.Width + 20, 30);
                 btnInsert.Location = new Point((cx - btnInsert.Width) / 2, separator.Bottom + 5);
             };
 
