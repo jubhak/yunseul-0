@@ -9,3 +9,5 @@
   <li>Unique 설정 시, 해당 컬럼 위치에 동일한 값이 있을 경우 마지막 줄에 입력이 아닌 기존 데이터 업데이트</li>
 </ul>
 
+26.05.12 구글 시트 바로 업데이트 가능한 옵션 추가
+<img width="630" height="375" alt="image" src="https://github.com/user-attachments/assets/a69aa087-a43a-4433-adfd-e03eefd6b151" />
